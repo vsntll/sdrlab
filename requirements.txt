@@ -1,0 +1,21 @@
+# Core DSP demo (pure Python, runs on CPU alone)
+numpy>=2.0
+scipy>=1.13
+matplotlib>=3.8
+
+# GPU acceleration -- CuPy for CUDA 12.x plus the CUDA 12 runtime libraries.
+# (The RTX 5060 / Blackwell needs CUDA 12.8+; these wheels are 12.9.)
+# On a machine without an NVIDIA GPU, skip everything below: sdrlab falls back
+# to NumPy automatically (or force it with SDRLAB_FORCE_CPU=1).
+cupy-cuda12x>=14.0
+nvidia-cuda-runtime-cu12
+nvidia-cuda-nvrtc-cu12
+nvidia-cufft-cu12
+nvidia-curand-cu12
+nvidia-cublas-cu12
+nvidia-cusparse-cu12
+nvidia-cusolver-cu12
+nvidia-nvjitlink-cu12
+
+# Optional: real RTL-SDR hardware capture (needs librtlsdr + a dongle)
+# pyrtlsdr>=0.3
