@@ -24,7 +24,6 @@ recorded ``.cfile``.
 from __future__ import annotations
 
 import argparse
-import time
 
 from gnuradio import analog, blocks, filter as gr_filter, gr
 from gnuradio.filter import firdes
@@ -46,6 +45,7 @@ class fm_rx_sim(gr.top_block):
         channel_decim = 5                       # 960k -> 192k IF
         if_rate = capture_rate / channel_decim
         channel_bw = 200_000
+        n_capture = int(capture_rate * seconds)
 
         # ---------------- SIMULATED CAPTURE ---------------------------------
         # A small tone bank stands in for program audio, summed at capture rate.
@@ -60,8 +60,12 @@ class fm_rx_sim(gr.top_block):
         offset = blocks.rotator_cc(TWO_PI * station_offset / capture_rate)
         noise = analog.noise_source_c(analog.GR_GAUSSIAN, 0.02, 0)
         mix = blocks.add_vcc(1)
+        # blocks.head bounds the (otherwise infinite) sources so tb.run() ends
+        # after exactly `seconds` of capture.
+        head = blocks.head(gr.sizeof_gr_complex, n_capture)
         self.connect(adder, fm_mod, offset, (mix, 0))
         self.connect(noise, (mix, 1))
+        self.connect(mix, head)
 
         # ---------------- RECEIVER ----------------------------------------
         # 1. Tune: undo the offset so the wanted station sits at DC.
@@ -79,16 +83,18 @@ class fm_rx_sim(gr.top_block):
         deemph = analog.fm_deemph(if_rate, 75e-6)
 
         # 5. Resample IF -> audio_rate and low-pass to the audio band.
+        from math import gcd
+
+        g = gcd(int(round(if_rate)), int(audio_rate))
         resamp = gr_filter.rational_resampler_fff(
-            interpolation=int(audio_rate), decimation=int(if_rate))
-        audio_taps = firdes.low_pass(1.0, audio_rate, 15_000, 2_000, window.WIN_HAMMING)
-        audio_lpf = gr_filter.fir_filter_fff(1, audio_taps)
+            interpolation=int(audio_rate) // g, decimation=int(round(if_rate)) // g)
+        audio_taps = firdes.low_pass(0.7, audio_rate, 15_000, 2_000, window.WIN_HAMMING)
+        audio_lpf = gr_filter.fir_filter_fff(1, audio_taps)  # 0.7 gain = headroom
 
         wav = blocks.wavfile_sink(
             out_wav, 1, int(audio_rate), blocks.FORMAT_WAV, blocks.FORMAT_PCM_16)
 
-        self.connect(mix, tuner, chan, quad, deemph, resamp, audio_lpf, wav)
-        self._seconds = seconds
+        self.connect(head, tuner, chan, quad, deemph, resamp, audio_lpf, wav)
 
 
 def main() -> None:
@@ -99,10 +105,7 @@ def main() -> None:
     args = p.parse_args()
 
     tb = fm_rx_sim(seconds=args.seconds, out_wav=args.out, station_offset=args.offset)
-    tb.start()
-    time.sleep(args.seconds)
-    tb.stop()
-    tb.wait()
+    tb.run()  # blocks.head ends the flowgraph after `seconds` of capture
     print(f"wrote {args.out}  ({args.seconds:.0f}s of demodulated audio)")
 
 
