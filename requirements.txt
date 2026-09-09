@@ -19,3 +19,7 @@ nvidia-nvjitlink-cu12
 
 # Optional: real RTL-SDR hardware capture (needs librtlsdr + a dongle)
 # pyrtlsdr>=0.3
+
+# The gnuradio_flowgraph/ scripts need a SEPARATE runtime, not this venv:
+# radioconda (GNU Radio 3.10+), installed here at C:\Users\avasa\radioconda.
+# CuPy + the nvidia-*-cu12 wheels above are also installed into that env.

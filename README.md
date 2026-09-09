@@ -87,5 +87,15 @@ plus `librtlsdr` and a dongle.
 ## The GNU Radio version
 
 `gnuradio_flowgraph/` contains the same FM receiver built from real GNU Radio
-blocks, plus a CuPy-backed FFT block. It needs a separate GNU Radio 3.10+
-runtime — see `gnuradio_flowgraph/README.md`.
+blocks, plus a CuPy-backed FFT spectrum analyzer. GNU Radio can't be
+pip-installed, so it uses a separate runtime — **radioconda (GNU Radio 3.10.12)
+at `C:\Users\avasa\radioconda`**, with CuPy installed into it as well:
+
+```bat
+set PY=C:\Users\avasa\radioconda\python.exe
+%PY% gnuradio_flowgraph\fm_rx_sim.py --seconds 5 --out outputs\gr_fm.wav
+%PY% gnuradio_flowgraph\spectrum_gpu.py
+```
+
+Both are verified working; see `gnuradio_flowgraph/README.md` for details and the
+block-by-block mapping to `sdrlab`.
