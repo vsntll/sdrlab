@@ -14,8 +14,21 @@ This is the GNU Radio bridge to the standalone pipeline in ``sdrlab/``.
 """
 from __future__ import annotations
 
+import os
+import warnings
+
 import numpy as np
 from gnuradio import gr
+
+# Some vendor tools (HP OMEN Broadcast, NVIDIA Broadcast) put a folder holding an
+# old nvrtc on PATH; cuda-pathfinder finds it first and CuPy's Windows startup
+# then crashes on a missing "...\bin". Drop those entries before importing cupy.
+os.environ["PATH"] = os.pathsep.join(
+    p for p in os.environ.get("PATH", "").split(os.pathsep)
+    if not any(m in p.upper() for m in ("OMEN", "NVIDIA BROADCAST"))
+)
+
+warnings.filterwarnings("ignore", message="CUDA path could not be detected")
 
 try:
     import cupy as _cp
