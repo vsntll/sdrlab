@@ -7,8 +7,8 @@ not support Python 3.14, so these files need a separate GNU Radio runtime.
 ## Installed runtime on this machine
 
 **radioconda 2025.03.14 → GNU Radio 3.10.12.0**, at `C:\Users\avasa\radioconda`
-(Python 3.12). CuPy 12.x + the `nvidia-*-cu12` wheels are installed into it too,
-so the GPU FFT block works. Interpreter:
+(Python 3.12). `cupy-cuda12x` 14.2 + the `nvidia-*-cu12` (CUDA 12.9) wheels are
+installed into it too, so the GPU FFT block runs on the RTX 5060. Interpreter:
 
 ```
 C:\Users\avasa\radioconda\python.exe
@@ -58,29 +58,33 @@ plus the `sdrlab` pipelines in one go.
 | `fm_receiver.grc` | the FM receiver as a gnuradio-companion flowgraph with live QT GUI sinks (generated, `grcc`-validated) |
 | `make_grc.py` | regenerates `fm_receiver.grc` via `gnuradio.grc.core` so it never drifts from the installed block defaults |
 
-`fm_rx_sim.py` is a hand-written flowgraph, *not* a `.grc` file, so
-`gnuradio-companion` will not open it directly. To edit it visually, recreate
-the chain in GRC:
+`fm_receiver.grc` is the GUI-editable version (open it in gnuradio-companion).
+`fm_rx_sim.py` is the scripted equivalent — same chain, no GUI, WAV out:
 
 ```
-  Signal Source (f) x3  --> Add --> Frequency Mod --> Rotator (+offset) --> Add <-- Noise Source (c)
-                                                                             |
-  Head --> Rotator (-offset) <-------------------------------------------------
-        |
-        v
-  Low Pass Filter (decim 5, cutoff 100 k)     <- FIR channel select
+  Signal Source (f) x3  --> Add ------.
+  Signal Source (f, 2 Hz, +0.8) ------+--> Multiply --> x0.5 --> Frequency Mod
+                                                                     |
+                                            Rotator (+offset) <-------'
+                                                 |
+                Noise Source (c) --> Add <--------'
+                                      |
+                                    Head --> Throttle --> Rotator (-offset)
+                                                                |
+  Low Pass Filter (decim 5, cutoff 100 k)  <- FIR channel select
         v
   Quadrature Demod  (gain = if_rate / (2*pi*75k))
         v
-  FM Deemphasis  (tau = 75 us)                 <- one-pole IIR
+  FM Deemphasis  (tau = 75 us)                <- one-pole IIR
         v
   Rational Resampler  (192k -> 48k)
         v
-  Low Pass Filter (cutoff 15 k, gain 0.7)  -->  WAV File Sink
+  Low Pass Filter (cutoff 15 k, gain 1.1)  -->  WAV File Sink
 ```
 
-Add an **Embedded Python Block** pointing at `epy_cupy_psd.py` and feed it the
-post-channel-filter stream to get a GPU-computed spectrum for a QT GUI Vector Sink.
+`spectrum_gpu.py` shows the other pattern: an **Embedded Python Block**
+(`epy_cupy_psd.py`) fed a complex stream, producing a GPU-computed power
+spectrum you can wire into a QT GUI Vector Sink.
 
 ## Mapping to `sdrlab`
 
