@@ -48,12 +48,21 @@ class fm_rx_sim(gr.top_block):
         n_capture = int(capture_rate * seconds)
 
         # ---------------- SIMULATED CAPTURE ---------------------------------
-        # A small tone bank stands in for program audio, summed at capture rate.
-        tones = [(440, 0.6), (1200, 0.35), (3300, 0.2)]
+        # A small tone bank stands in for program audio, summed at capture rate
+        # and given a 2 Hz tremolo (matches sdrlab.sources.synth_message).
+        tones = [(440, 1.0), (1200, 0.5), (3300, 0.3)]
         adder = blocks.add_vff(1)
         for i, (f, a) in enumerate(tones):
             src = analog.sig_source_f(capture_rate, analog.GR_COS_WAVE, f, a, 0)
             self.connect(src, (adder, i))
+        tremolo = analog.sig_source_f(capture_rate, analog.GR_SIN_WAVE, 2.0, 0.2, 0.8)
+        tremolo_mul = blocks.multiply_ff()
+        # Keep |message| <= 1 so peak deviation stays inside the channel filter
+        # (sum of tone amplitudes is 1.8; 0.5 scale -> ~0.9 peak).
+        message = blocks.multiply_const_ff(0.5)
+        self.connect(adder, (tremolo_mul, 0))
+        self.connect(tremolo, (tremolo_mul, 1))
+        self.connect(tremolo_mul, message)
 
         fm_mod = analog.frequency_modulator_fc(TWO_PI * deviation / capture_rate)
         # Shift the station off zero so the channel filter has work to do.
@@ -63,7 +72,7 @@ class fm_rx_sim(gr.top_block):
         # blocks.head bounds the (otherwise infinite) sources so tb.run() ends
         # after exactly `seconds` of capture.
         head = blocks.head(gr.sizeof_gr_complex, n_capture)
-        self.connect(adder, fm_mod, offset, (mix, 0))
+        self.connect(message, fm_mod, offset, (mix, 0))
         self.connect(noise, (mix, 1))
         self.connect(mix, head)
 
@@ -88,8 +97,8 @@ class fm_rx_sim(gr.top_block):
         g = gcd(int(round(if_rate)), int(audio_rate))
         resamp = gr_filter.rational_resampler_fff(
             interpolation=int(audio_rate) // g, decimation=int(round(if_rate)) // g)
-        audio_taps = firdes.low_pass(0.7, audio_rate, 15_000, 2_000, window.WIN_HAMMING)
-        audio_lpf = gr_filter.fir_filter_fff(1, audio_taps)  # 0.7 gain = headroom
+        audio_taps = firdes.low_pass(1.1, audio_rate, 15_000, 2_000, window.WIN_HAMMING)
+        audio_lpf = gr_filter.fir_filter_fff(1, audio_taps)  # 1.1 gain: fill the WAV
 
         wav = blocks.wavfile_sink(
             out_wav, 1, int(audio_rate), blocks.FORMAT_WAV, blocks.FORMAT_PCM_16)
