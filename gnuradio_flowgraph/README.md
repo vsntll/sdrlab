@@ -31,12 +31,22 @@ set PY=C:\Users\avasa\radioconda\python.exe
 %PY% fm_rx_sim.py --seconds 5 --out ..\outputs\gr_fm.wav   :: WBFM receiver -> WAV
 %PY% spectrum_gpu.py                                        :: GPU-FFT spectrum analyzer
 %PY% epy_cupy_psd.py                                        :: smoke-test the CuPy block
+%PY% make_grc.py                                            :: regenerate fm_receiver.grc
 ```
 
+Open **`fm_receiver.grc`** in gnuradio-companion for the live-GUI version (RF
+spectrum + waterfall + recovered-audio spectrum + audio playback), or compile it
+headless: `grcc fm_receiver.grc`.
+
 Verified output:
-* `fm_rx_sim.py` → `gr_fm.wav`, 5 s @ 48 kHz, the 440/1200/3300 Hz tones recovered.
+* `fm_rx_sim.py` → `gr_fm.wav`, 5 s @ 48 kHz, the 440/1200/3300 Hz tones recovered
+  (with the 2 Hz tremolo, matching `sdrlab`).
 * `spectrum_gpu.py` → prints the 4 simulated carriers (−600/−120/+300/+850 kHz),
   FFT run on the RTX 5060 through `epy_cupy_psd.blk`.
+* `fm_receiver.grc` → compiles with `grcc`, runs in gnuradio-companion.
+
+`../scripts/selftest.py` (run with the project venv) exercises all of the above
+plus the `sdrlab` pipelines in one go.
 
 ## Files
 
@@ -45,6 +55,8 @@ Verified output:
 | `fm_rx_sim.py` | hand-written `gr.top_block`: simulated capture → tune → FIR channelize → quadrature demod → `analog.fm_deemph` (IIR) → resample → WAV |
 | `spectrum_gpu.py` | multitone source → `epy_cupy_psd` block → frame-averaged PSD → peak list |
 | `epy_cupy_psd.py` | **Embedded Python Block**: windowed \|FFT\|² → dB, computed on the GPU with CuPy (NumPy fallback), fftshift order |
+| `fm_receiver.grc` | the FM receiver as a gnuradio-companion flowgraph with live QT GUI sinks (generated, `grcc`-validated) |
+| `make_grc.py` | regenerates `fm_receiver.grc` via `gnuradio.grc.core` so it never drifts from the installed block defaults |
 
 `fm_rx_sim.py` is a hand-written flowgraph, *not* a `.grc` file, so
 `gnuradio-companion` will not open it directly. To edit it visually, recreate

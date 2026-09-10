@@ -18,9 +18,12 @@ scripts/
   demo_fm.py       WBFM receiver: synth capture -> audio  -> outputs/fm_audio.wav + fm_chain.png
   demo_filters.py  FIR vs IIR design/response/effect showcase           -> outputs/filters.png
   benchmark.py     CuPy vs NumPy/SciPy for FFT + FIR across sizes        -> outputs/benchmark.png
+  selftest.py      run every pipeline (both envs) headless and assert the output is sane
 gnuradio_flowgraph/
   fm_rx_sim.py     the same FM receiver as a real GNU Radio flowgraph (needs radioconda)
+  spectrum_gpu.py  GNU Radio spectrum analyzer with the FFT stage on the GPU
   epy_cupy_psd.py  GNU Radio Embedded Python Block: FFT power spectrum on the GPU
+  fm_receiver.grc  gnuradio-companion flowgraph (live QT GUI) + make_grc.py generator
 ```
 
 ## Setup
@@ -45,6 +48,7 @@ python scripts/demo_spectrum.py
 python scripts/demo_fm.py
 python scripts/demo_filters.py
 python scripts/benchmark.py
+python scripts/selftest.py        # runs everything above + the GNU Radio side, asserts output
 ```
 
 Each writes a PNG (and `demo_fm` a WAV) into `outputs/` and prints per-stage
