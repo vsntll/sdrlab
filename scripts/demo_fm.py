@@ -64,8 +64,9 @@ def main() -> None:
 
     wav = OUT / "fm_audio.wav"
     modulation.write_wav(str(wav), audio, afs)
-    print(f"\ndemod wall time: {wall*1e3:.1f} ms for {args.duration:.1f}s of audio "
-          f"({args.duration/wall:.0f}x realtime)")
+    audio_secs = len(audio) / afs
+    print(f"\ndemod wall time: {wall*1e3:.1f} ms for {audio_secs:.1f}s of audio "
+          f"({audio_secs/wall:.0f}x realtime)")
     if ref_msg is not None:
         snr = modulation.audio_quality(audio, ref_msg, afs, ref_fs)
         print(f"recovered-audio SNR vs reference message: {snr:.1f} dB")
